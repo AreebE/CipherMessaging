@@ -13,6 +13,8 @@ import android.view.ViewGroup;
  * Use the {@link LoginFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
+
+// testioqwjfpo;kawO'gtolq'rolQ[RO
 public class LoginFragment extends Fragment {
 
     // TODO: Rename parameter arguments, choose names that match
