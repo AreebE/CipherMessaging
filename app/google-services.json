@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "829086246564",
+    "project_id": "firstone-affff",
+    "storage_bucket": "firstone-affff.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:829086246564:android:5876359bb9001726586831",
+        "android_client_info": {
+          "package_name": "com.example.ciphermessaging"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "829086246564-4lkl13qs5gel0nkdaff8sdot28ht1fft.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAFA09TH-RguidnoJI48vSlDlIuOtNbcc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "829086246564-4lkl13qs5gel0nkdaff8sdot28ht1fft.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

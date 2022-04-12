@@ -2,4 +2,9 @@
     <string name="app_name">CipherMessaging</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="firstNameHint">Username</string>
+    <string name="introToApp">Welcome to the Cipher App!</string>
+    <string name="usernameHint">Username</string>
+    <string name="passwordHint">Password</string>
+    <string name="submitText">Submit</string>
 </resources>

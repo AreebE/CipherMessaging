@@ -1,14 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context=".LoginFragment">
 
-    <!-- TODO: Update blank fragment layout -->
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:textSize="40sp"
+        android:textAppearance="@android:style/TextAppearance"
+        android:gravity="center|top"
+        android:layout_gravity="center"
+        android:layout_margin="16dp"
 
-</FrameLayout>
+        android:textStyle="bold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/introToApp" />
+
+    <!-- TODO: Update blank fragment layout -->
+    <EditText android:id="@+id/username"
+        android:autofillHints="username"
+        android:layout_margin="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/usernameHint"
+        android:gravity="center"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large" />
+
+    <EditText android:id="@+id/password"
+        android:autofillHints="password"
+        android:layout_margin="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/passwordHint"
+        android:gravity="center"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large" />
+
+    <Button android:id="@+id/submitButton"
+        android:layout_width="100dp"
+        android:layout_gravity="center"
+        android:layout_height="wrap_content"
+        android:textAllCaps="false"
+        android:text="@string/submitText"
+        android:layout_margin="16dp"
+        />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:src="@drawable/ic_launcher_background"
+        android:layout_margin="16dp"/>
+
+
+</LinearLayout>
