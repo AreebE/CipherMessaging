@@ -25,8 +25,14 @@ import java.util.concurrent.Executors;
 
 public class LoginFragment extends Fragment {
 
+    public interface LoginInterface
+    {
+        public void logInUser(String username);
+    }
 
     private static final String TAG = "LoginFragment";
+
+    private LoginInterface loginInterface;
 
     public LoginFragment() {
         // Required empty public constructor
@@ -44,12 +50,14 @@ public class LoginFragment extends Fragment {
         return fragment;
     }
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
 
         }
+        loginInterface = (LoginInterface) getActivity();
     }
 
     @Override
@@ -60,37 +68,52 @@ public class LoginFragment extends Fragment {
         Executor executor = Executors.newSingleThreadExecutor();
         EditText username = (EditText) v.findViewById(R.id.username);
         EditText password = (EditText) v.findViewById(R.id.password);
-        ((Button) v.findViewById(R.id.submitButton)).setOnClickListener(
+        Button button = (Button) v.findViewById(R.id.submitButton);
+        button.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         executor.execute(new Runnable() {
                             @Override
                             public void run() {
+                                Log.d(TAG, "click");
                                 Query q = new FirebaseReader().confirmUser(username.getText().toString(), password.getText().toString());
                                 q.get()
                                         .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                                             @Override
                                             public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                                Log.d(TAG, "Completed");
                                                 if (task.isSuccessful())
                                                 {
-                                                    for (QueryDocumentSnapshot doc: task.getResult())
+                                                    Log.d(TAG, "was successful");
+                                                    QuerySnapshot documents = task.getResult();
+                                                    for (QueryDocumentSnapshot doc: documents)
                                                     {
-                                                        Log.d(TAG, doc.getId() + " and " + doc.getData());
+                                                        loginInterface.logInUser(doc.getString(FirebaseReader.USERNAME_KEY));
+                                                        //                                                        Log.d(TAG, doc.getId() + " and " + doc.getData());
+                                                    }
+                                                    if (documents.isEmpty())
+                                                    {
+//                                                        Log.d(TAG, "nothing found");
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    Log.d(TAG, "couldn't get documents due to " +  task.getException().toString());
+                                                    Log.d(TAG, "couldn't get documents due to " + task.getException().toString());
                                                 }
                                             }
                                         });
                             }
                         });
                     }
-                }
-        );
-
+                });
+        Button create = (Button) v.findViewById(R.id.createUser);
+        create.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new CreateUserFragment().show(getChildFragmentManager(), TAG);
+            }
+        });
         return v;
     }
 }
