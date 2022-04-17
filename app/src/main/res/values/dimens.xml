@@ -1,0 +1,5 @@
+<resources>
+        <dimen name="fab_margin">16dp</dimen>
+    <dimen name="message_spacer">10dp</dimen>
+    <dimen name="dateSpace">100dp</dimen>
+    </resources>

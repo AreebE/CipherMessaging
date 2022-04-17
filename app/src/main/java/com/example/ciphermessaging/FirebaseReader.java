@@ -1,7 +1,6 @@
 package com.example.ciphermessaging;
 
 import android.util.Log;
-import android.view.View;
 
 import androidx.annotation.NonNull;
 
@@ -13,15 +12,20 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class FirebaseReader {
+
+    public static final String MESSAGES_DATABASE = "Message";
+    public static final String CONTENT_KEY = "content";
+    public static final String SENDER_KEY = "sender";
+    public static final String TIME_KEY = "time";
 
     public static final String CONVERSATIONS_DATABASE = "conversations";
     public static final String USERS_KEY = "users";
@@ -80,6 +84,36 @@ public class FirebaseReader {
 
                             }
                         });
+                    }
+                });
+    }
+
+    public void getMessages(String convoID, ArrayList<ConversationDisplayFragment.MessageItem> items, FirebaseReaderListener messagingFragment) {
+        database.collection(CONVERSATIONS_DATABASE)
+                .document(convoID)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        DocumentSnapshot conversation = task.getResult();
+                        List<DocumentReference> messageLinks = (List<DocumentReference>) conversation.get(MESSAGES_KEY);
+                        for (int i = 0; i < messageLinks.size(); i++)
+                        {
+                            database.collection(MESSAGES_DATABASE)
+                                    .document(messageLinks.get(i).getId())
+                                    .get()
+                                    .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                            DocumentSnapshot message = task.getResult();
+                                            String content = message.getString(CONTENT_KEY);
+                                            String sender = message.getString(SENDER_KEY);
+                                            Date timeStamp = message.getDate(TIME_KEY);
+                                            items.add(new ConversationDisplayFragment.MessageItem(sender, timeStamp, content));
+                                            messagingFragment.notifyOnSuccess();
+                                        }
+                                    });
+                        }
                     }
                 });
     }

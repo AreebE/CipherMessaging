@@ -1,6 +1,7 @@
 package com.example.ciphermessaging;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -9,6 +10,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.ListFragment;
 import androidx.recyclerview.widget.ListAdapter;
 
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -17,6 +19,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -126,6 +129,17 @@ public class ContactsFragment extends ListFragment {
     public void onStart() {
         super.onStart();
         registerForContextMenu(getListView());
+    }
+
+    @Override
+    public void onListItemClick(@NonNull ListView l, @NonNull View v, int position, long id) {
+        String convoID = ((ConversationItem) getListAdapter().getItem(position)).getID();
+        Intent i = new Intent(getActivity(), ConversationActivity.class);
+        Log.d(TAG, "item cliekc");
+        i.putExtra(ConversationActivity.CONVO_ID, convoID);
+        i.putExtra(ConversationActivity.USER_KEY, username);
+        startActivity(i);
+        super.onListItemClick(l, v, position, id);
     }
 
     /* The menus */

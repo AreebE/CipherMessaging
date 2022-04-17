@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ConversationDisplayFragment"
+    android:orientation="horizontal">
+
+    <!-- TODO: Update blank fragment layout -->
+    <TextView android:id="@+id/messageContent"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:text="@string/hello_blank_fragment"
+        android:background="@drawable/text_background"
+        android:textSize="24dp"
+        android:textColor="@color/black"
+        android:layout_weight="1"
+
+        />
+    <ImageButton android:id="@+id/messageSendButton"
+        android:background="@android:drawable/ic_menu_send"
+        android:layout_width="100dp"
+        android:layout_height="100dp"/>
+
+</LinearLayout>
