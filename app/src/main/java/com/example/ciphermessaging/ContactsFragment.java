@@ -6,6 +6,7 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.ListFragment;
 import androidx.recyclerview.widget.ListAdapter;
@@ -21,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -34,12 +36,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Create badge to show when there are new messages availabl
+ */
+
+/**
  * A simple {@link Fragment} subclass.
  * Use the {@link ContactsFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class ContactsFragment extends ListFragment {
+public class ContactsFragment extends ListFragment
+        implements CreateConvoFragment.CreateConvoListener{
     private static final String TAG = "ContactsFragment";
+
+    @Override
+    public void onSuccessfulCreation() {
+        loadConversations();
+    }
 //ljlkkpp
 
     public static class ConversationItem
@@ -103,24 +115,10 @@ public class ContactsFragment extends ListFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_contacts, container, false);
-        ArrayList<ConversationItem> items = new ArrayList<>();
-        new FirebaseReader().getConversations(username, items, new FirebaseReader.FirebaseReaderListener() {
-            @Override
-            public void notifyOnError(String message) {
-
-            }
-
-            @Override
-            public void notifyOnSuccess() {
-                ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), items));
-
-//                getListAdapter().notify();
-            }
-        });
+        loadConversations();
 
         return v;
     }
@@ -128,11 +126,16 @@ public class ContactsFragment extends ListFragment {
     @Override
     public void onStart() {
         super.onStart();
-        registerForContextMenu(getListView());
+//        registerForContextMenu(getListView());
     }
 
     @Override
     public void onListItemClick(@NonNull ListView l, @NonNull View v, int position, long id) {
+        if (!new FirebaseReader().isInternetEnabled(getContext()))
+        {
+            Toast.makeText(getActivity(), "The internet is not working.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String convoID = ((ConversationItem) getListAdapter().getItem(position)).getID();
         Intent i = new Intent(getActivity(), ConversationActivity.class);
         Log.d(TAG, "item cliekc");
@@ -142,7 +145,14 @@ public class ContactsFragment extends ListFragment {
         super.onListItemClick(l, v, position, id);
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadConversations();
+    }
+
     /* The menus */
+
 
 
     @Override
@@ -156,18 +166,20 @@ public class ContactsFragment extends ListFragment {
         switch (item.getItemId())
         {
             case R.id.add_convo:
-                CreateConvoFragment.newInstance(username).show(getChildFragmentManager(), TAG);
+                DialogFragment createConvo = CreateConvoFragment.newInstance(username);
+//                createConvo.setTargetFragment(this, 000);
+                createConvo.show(getChildFragmentManager(), TAG);
 
         }
         return super.onOptionsItemSelected(item);
 
     }
-
-    @Override
-    public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v, @Nullable ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        getActivity().getMenuInflater().inflate(R.menu.convo_context_menu, menu);
-    }
+//
+//    @Override
+//    public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v, @Nullable ContextMenu.ContextMenuInfo menuInfo) {
+////        super.onCreateContextMenu(menu, v, menuInfo);
+////        getActivity().getMenuInflater().inflate(R.menu.convo_context_menu, menu);
+//    }
 
     /* The adapter */
     private class ContactAdapter extends ArrayAdapter<ConversationItem>
@@ -189,5 +201,26 @@ public class ContactsFragment extends ListFragment {
             convo.setText(this.getItem(position).getConvoName());
             return convertView;
         }
+
+
+    }
+
+    public void loadConversations()
+    {
+        ArrayList<ConversationItem> items = new ArrayList<>();
+        new FirebaseReader().getConversations(username, items, new FirebaseReader.FirebaseReaderListener() {
+            @Override
+            public void notifyOnError(String message) {
+
+            }
+
+            @Override
+            public void notifyOnSuccess() {
+                ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), items));
+
+//                getListAdapter().notify();
+            }
+        },
+                getContext());
     }
 }

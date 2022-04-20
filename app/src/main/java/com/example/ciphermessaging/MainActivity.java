@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity
         public void run() {
 //            APIHandler.makeTextRequest();
 //            APIHandler.createText("ji3jfoijqiofj3qwiojfiowjmqfiib GARBAGE");
-            new FirebaseReader().createUser("CD", "Ceddby", "Deah", "3492msog", MainActivity.this);
+//            new FirebaseReader().createUser("CD", "Ceddby", "Deah", "3492msog", MainActivity.this);
         }
 
     };

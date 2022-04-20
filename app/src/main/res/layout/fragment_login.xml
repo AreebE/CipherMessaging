@@ -29,6 +29,7 @@
         android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large" />
 
     <EditText android:id="@+id/password"
+        android:inputType="textPassword"
         android:autofillHints="password"
         android:layout_margin="16dp"
         android:layout_width="match_parent"

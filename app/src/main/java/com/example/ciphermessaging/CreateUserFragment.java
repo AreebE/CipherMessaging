@@ -79,7 +79,7 @@ public class CreateUserFragment extends DialogFragment
                     notifyOnError("Please put valid input.");
                     return;
                 }
-                new FirebaseReader().createUser(user, first, last, pass, CreateUserFragment.this);
+                new FirebaseReader().createUser(user, first, last, pass, CreateUserFragment.this, getContext());
             }
         });
         AlertDialog dialog = new AlertDialog.Builder(getActivity())

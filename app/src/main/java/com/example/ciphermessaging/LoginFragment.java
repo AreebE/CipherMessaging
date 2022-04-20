@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -73,11 +74,29 @@ public class LoginFragment extends Fragment {
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        executor.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.d(TAG, "click");
-                                Query q = new FirebaseReader().confirmUser(username.getText().toString(), password.getText().toString());
+
+                                Query q = new FirebaseReader().confirmUser
+                                        (
+                                                username.getText().toString(),
+                                                password.getText().toString(),
+                                                new FirebaseReader.FirebaseReaderListener()
+                                                {
+                                                    @Override
+                                                    public void notifyOnError(String message) {
+                                                        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                                                    }
+
+                                                    @Override
+                                                    public void notifyOnSuccess() {
+
+                                                    }
+                                                },
+                                                getContext()
+                                        );
+                                if (q == null)
+                                {
+                                    return;
+                                }
                                 q.get()
                                         .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                                             @Override
@@ -105,8 +124,6 @@ public class LoginFragment extends Fragment {
                                         });
                             }
                         });
-                    }
-                });
         Button create = (Button) v.findViewById(R.id.createUser);
         create.setOnClickListener(new View.OnClickListener() {
             @Override

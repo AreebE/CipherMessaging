@@ -1,5 +1,9 @@
 package com.example.ciphermessaging;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -20,6 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+ * Add a fail when the internet is off
+ */
 public class FirebaseReader {
 
     public static final String MESSAGES_DATABASE = "Message";
@@ -42,8 +49,42 @@ public class FirebaseReader {
     public static final String LAST_NAME_KEY = "last";
     public static final String FIRST_NAME_KEY = "first";
 
-    public void createConvo(String username, String otherUsername, String conversationTitle, FirebaseReaderListener listener)
+    public void createConvo(
+            String username,
+            String otherUsername,
+            String conversationTitle,
+            FirebaseReaderListener listener,
+            Context context)
     {
+        if (!isInternetEnabled(context))
+        {
+            listener.notifyOnError("No connection to the internet.");
+            return;
+        }
+        database.collection(USERNAME_DATABASE)
+                .whereEqualTo(USERNAME_KEY, otherUsername)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.getResult().size() == 0)
+                        {
+                            listener.notifyOnError("No other user found.");
+                            return;
+                        }
+                        loadConvo(username, otherUsername, conversationTitle, listener);
+                    }
+                });
+
+    }
+
+    private void loadConvo(
+            String username,
+            String otherUsername,
+            String conversationTitle,
+            FirebaseReaderListener listener)
+    {
+
         Map<String, Object> convoData = new HashMap<>();
         convoData.put(USERS_KEY, new ArrayList<String>(){
             {
@@ -68,8 +109,13 @@ public class FirebaseReader {
                                 DocumentSnapshot user = task.getResult().getDocuments().get(0);
                                 Map<String, Object> objects = user.getData();
                                 ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(ref);
-                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects);
-
+                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects)
+                                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<Void> task) {
+                                        listener.notifyOnSuccess();
+                                    }
+                                });
                             }
                         });
                         database.collection(USERNAME_DATABASE)
@@ -88,7 +134,19 @@ public class FirebaseReader {
                 });
     }
 
-    public void getMessages(String convoID, ArrayList<ConversationDisplayFragment.MessageItem> items, FirebaseReaderListener messagingFragment) {
+
+    public void getMessages(
+            String convoID,
+            ArrayList<ConversationDisplayFragment.MessageItem> items,
+            FirebaseReaderListener messagingFragment,
+            Context context
+            )
+    {
+        if (!isInternetEnabled(context))
+        {
+            messagingFragment.notifyOnError("No connection to the internet.");
+            return;
+        }
         database.collection(CONVERSATIONS_DATABASE)
                 .document(convoID)
                 .get()
@@ -118,6 +176,50 @@ public class FirebaseReader {
                 });
     }
 
+    public void createMessage(
+            String sender,
+            String content,
+            Date timestamp,
+            String convoID,
+            FirebaseReaderListener listener,
+            Context context)
+    {
+        if (!isInternetEnabled(context))
+        {
+            listener.notifyOnError("No connection to the internet.");
+            return;
+        }
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put(SENDER_KEY, sender);
+        messageData.put(CONTENT_KEY, content);
+        messageData.put(TIME_KEY, timestamp);
+        database.collection(MESSAGES_DATABASE)
+                .add(messageData)
+                .addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentReference> task) {
+                        DocumentReference messageReference = task.getResult();
+                        database.collection(CONVERSATIONS_DATABASE)
+                                .document(convoID)
+                                .get()
+                                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                        Map<String, Object> convoData = task.getResult().getData();
+                                        ((List<DocumentReference>) convoData.get(MESSAGES_KEY)).add(0, messageReference);
+                                        database.collection(CONVERSATIONS_DATABASE).document(convoID).update(convoData)
+                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<Void> task) {
+                                                listener.notifyOnSuccess();
+                                            }
+                                        });
+                                    }
+                                });
+                    }
+                });
+    }
+
     public interface FirebaseReaderListener
     {
         public void notifyOnError(String message);
@@ -131,14 +233,35 @@ public class FirebaseReader {
         //        database.collection("users");
     }
 
-    public Query confirmUser(String username, String password) {
+    public Query confirmUser(
+            String username,
+            String password,
+            FirebaseReaderListener listener,
+            Context context) {
+        if (!isInternetEnabled(context))
+        {
+            listener.notifyOnError("No connection to the internet.");
+            return null;
+        }
         return database.collection(USERNAME_DATABASE)
                 .whereEqualTo(USERNAME_KEY, username)
                 .whereEqualTo(PASSWORD_KEY, password);
 
     }
 
-    public void createUser(String username, String firstName, String lastName, String password, FirebaseReaderListener listener) {
+    public void createUser(
+            String username,
+            String firstName,
+            String lastName,
+            String password,
+            FirebaseReaderListener listener,
+            Context context)
+    {
+        if (!isInternetEnabled(context))
+        {
+            listener.notifyOnError("No connection to the internet.");
+            return;
+        }
         Query q = database.collection("users")
                 .whereEqualTo("username", username);
         q.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -183,8 +306,14 @@ public class FirebaseReader {
     public void getConversations(
             String username,
             ArrayList<ContactsFragment.ConversationItem> items,
-            FirebaseReaderListener listener)
+            FirebaseReaderListener listener,
+            Context context)
     {
+        if (!isInternetEnabled(context))
+        {
+            listener.notifyOnError("No connection to the internet.");
+            return;
+        }
         System.out.println(username);
         Query q = database.collection(USERNAME_DATABASE)
                 .whereEqualTo(USERNAME_KEY, username);
@@ -198,7 +327,7 @@ public class FirebaseReader {
                         List<DocumentReference> convosIDs = (List<DocumentReference>) document.get(CONVERSATIONS_KEY);
                         for (DocumentReference docRef: convosIDs)
                         {
-                            Log.d(TAG, docRef.getId());
+                            Log.d(TAG,  "\"" + docRef.getId() + "\"");
                             database.collection(CONVERSATIONS_DATABASE)
                                     .document(docRef.getId())
                                     .get()
@@ -209,6 +338,7 @@ public class FirebaseReader {
                                             System.out.println(convo.toString());
                                             String id = convo.getId();
                                             String title = convo.getString(TITLE_KEY);
+                                            Log.d(TAG, id);
                                             List<String> users = (List<String>) convo.get(USERS_KEY);
                                             int name = (users.get(0).equals(username))? 1: 0;
                                             items.add(new ContactsFragment.ConversationItem(id, users.get(name), title));
@@ -245,4 +375,15 @@ public class FirebaseReader {
 //                    }
 //                });
 
+    public boolean isInternetEnabled(Context context)
+    {
+        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network network = manager.getActiveNetwork();
+        if (network != null)
+        {
+            return manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    && manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        }
+        return false;
+    }
 }

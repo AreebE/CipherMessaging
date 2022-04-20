@@ -9,11 +9,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -23,6 +25,12 @@ import android.widget.EditText;
 public class CreateConvoFragment extends DialogFragment
         implements FirebaseReader.FirebaseReaderListener{
 
+    private static final String TAG = "CreateConvo";
+
+    public interface CreateConvoListener
+    {
+        public void onSuccessfulCreation();
+    }
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String USER_KEY = "user";
@@ -71,7 +79,13 @@ public class CreateConvoFragment extends DialogFragment
             public void onClick(View view) {
                 String otherUsername = otherUser.getEditableText().toString();
                 String conversationTitle = convoTitle.getEditableText().toString();
-                new FirebaseReader().createConvo(username, otherUsername, conversationTitle, CreateConvoFragment.this);
+                if (otherUsername.length() == 0
+                    || conversationTitle.length() == 0)
+                {
+                    notifyOnError("Need all input fields to be filled.");
+                    return;
+                }
+                new FirebaseReader().createConvo(username, otherUsername, conversationTitle, CreateConvoFragment.this, getContext());
             }
         });
         AlertDialog dialog = new AlertDialog.Builder(getActivity())
@@ -82,11 +96,12 @@ public class CreateConvoFragment extends DialogFragment
 
     @Override
     public void notifyOnError(String message) {
-
+        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void notifyOnSuccess() {
+        Log.d(TAG, "called the notify");
         dismiss();
     }
 }

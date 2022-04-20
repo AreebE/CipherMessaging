@@ -7,12 +7,12 @@
     android:orientation="horizontal">
 
     <!-- TODO: Update blank fragment layout -->
-    <TextView android:id="@+id/messageContent"
+    <EditText android:id="@+id/messageContent"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment"
         android:background="@drawable/text_background"
         android:textSize="24dp"
+        android:hint="@string/startMessage"
         android:textColor="@color/black"
         android:layout_weight="1"
 
@@ -20,6 +20,6 @@
     <ImageButton android:id="@+id/messageSendButton"
         android:background="@android:drawable/ic_menu_send"
         android:layout_width="100dp"
-        android:layout_height="100dp"/>
+        android:layout_height="match_parent"/>
 
 </LinearLayout>

@@ -1,5 +1,6 @@
 package com.example.ciphermessaging;
 
+import android.media.Image;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -7,6 +8,15 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.Toast;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
 
 /**
  * A simple {@link Fragment} subclass.
@@ -15,33 +25,29 @@ import android.view.ViewGroup;
  */
 public class CreateMessageFragment extends Fragment {
 
+    public interface MessageCreatedListener
+    {
+        public void onMessageCreated();
+    }
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private static final String SENDER_KEY = "sender";
+    private static final String CONVO_ID_KEY = "convo id";
 
     // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private String sender;
+    private String convoID;
 
     public CreateMessageFragment() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment ConversationFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static CreateMessageFragment newInstance(String param1, String param2) {
+
+    public static CreateMessageFragment newInstance(String sender, String convoID) {
         CreateMessageFragment fragment = new CreateMessageFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
+        args.putString(SENDER_KEY, sender);
+        args.putString(CONVO_ID_KEY, convoID);
         fragment.setArguments(args);
         return fragment;
     }
@@ -50,8 +56,8 @@ public class CreateMessageFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+            sender = getArguments().getString(SENDER_KEY);
+            convoID = getArguments().getString(CONVO_ID_KEY);
         }
     }
 
@@ -59,6 +65,42 @@ public class CreateMessageFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_create_message, container, false);
+        View v = inflater.inflate(R.layout.fragment_create_message, container, false);
+        EditText contentView = (EditText) v.findViewById(R.id.messageContent);
+        ImageButton submitMessage = (ImageButton) v.findViewById(R.id.messageSendButton);
+        submitMessage.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+
+                String content = contentView.getText().toString();
+                if (content.length() == 0)
+                {
+                    return;
+                }
+                Date timestamp = Calendar.getInstance().getTime();
+                new FirebaseReader().createMessage
+                        (
+                                sender,
+                                content,
+                                timestamp,
+                                convoID,
+                                new FirebaseReader.FirebaseReaderListener() {
+                                    @Override
+                                    public void notifyOnError(String message) {
+                                        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                                    }
+
+                                    @Override
+                                    public void notifyOnSuccess() {
+                                        ((MessageCreatedListener) getActivity()).onMessageCreated();
+                                    }
+                                },
+                                getContext()
+                        );
+            }
+        });
+        return v;
     }
 }

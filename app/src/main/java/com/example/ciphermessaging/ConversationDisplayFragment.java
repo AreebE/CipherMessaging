@@ -21,8 +21,16 @@ import android.widget.TextView;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
+/**
+ * Every 1 sec. do a poll to check for new messages
+ * Find a way to automatically slow down
+ * * OPTIONAL -- Seperate dates by timestamps *
+ */
 
 /**
  * A simple {@link Fragment} subclass.
@@ -35,6 +43,7 @@ public class ConversationDisplayFragment extends ListFragment
     private static final String TAG = "ConversationDisplayFrag";
 
     public static class MessageItem
+        implements Comparable<MessageItem>
     {
         private String sender;
         private Date timestamp;
@@ -58,6 +67,11 @@ public class ConversationDisplayFragment extends ListFragment
 
         public String getContent() {
             return content;
+        }
+
+        @Override
+        public int compareTo(MessageItem messageItem) {
+            return 1 * this.timestamp.compareTo(messageItem.getTimestamp());
         }
     }
 
@@ -99,22 +113,8 @@ public class ConversationDisplayFragment extends ListFragment
     @Override
     public void onResume() {
         super.onResume();
-        ArrayList<MessageItem> items = new ArrayList<>();
-//        MessageAdapter adapter = new MessageAdapter(getActivity(), items);
-//        setListAdapter(adapter);
-        new FirebaseReader().getMessages(convoID, items, new FirebaseReader.FirebaseReaderListener() {
-            @Override
-            public void notifyOnError(String message) {
-
-            }
-
-            @Override
-            public void notifyOnSuccess() {
-                MessageAdapter adapter = new MessageAdapter(getActivity(), items);
-
-                setListAdapter(adapter);
-            }
-        });
+        Log.d(TAG, "on resume");
+        loadConversation();
     }
 
 
@@ -128,13 +128,22 @@ public class ConversationDisplayFragment extends ListFragment
         @NonNull
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            if (convertView == null)
+            MessageItem currentItem = getItem(position);
+            if (position == getCount() - 1)
             {
-                convertView = getLayoutInflater().inflate(R.layout.message_item, null);
+                getListView().setSelection(position);
+            }
+            if (convertView != null)
+            {
+                TextView textContentView = (TextView) convertView.findViewById(R.id.contentDisplay);
+                textContentView.setText(currentItem.getContent());
+                return convertView;
             }
 
+            convertView = getLayoutInflater().inflate(R.layout.message_item, null);
+
+//            Log.d(TAG, "creating a view");
             LinearLayout layout = (LinearLayout) convertView;
-            MessageItem currentItem = getItem(position);
             TextView textContentView = (TextView) convertView.findViewById(R.id.contentDisplay);
             textContentView.setText(currentItem.getContent());
 
@@ -159,9 +168,35 @@ public class ConversationDisplayFragment extends ListFragment
                 textContentView.setBackground(getResources().getDrawable(R.drawable.text_user_background));
 
             }
-            Log.d(TAG, "Called a get view." + currentItem.getContent() +"," + position);
+//            Log.d(TAG, "Called a get view." + currentItem.getContent() +"," + position);
 
             return convertView;
         }
+    }
+
+    public void loadConversation()
+    {
+        ArrayList<MessageItem> items = new ArrayList<>();
+//        MessageAdapter adapter = new MessageAdapter(getActivity(), items);
+//        setListAdapter(adapter);
+        Log.d(TAG, convoID + "loading convo");
+        new FirebaseReader().getMessages(convoID, items, new FirebaseReader.FirebaseReaderListener() {
+            @Override
+            public void notifyOnError(String message) {
+
+            }
+
+            @Override
+            public void notifyOnSuccess() {
+                MessageAdapter adapter = new MessageAdapter(getActivity(), items);
+                Collections.sort(items);
+                for (int i = 0; i < items.size(); i++)
+                {
+                    Log.d(TAG, items.get(i).content);
+                }
+                setListAdapter(adapter);
+            }
+        },
+                getContext());
     }
 }
