@@ -45,8 +45,7 @@ public class ConversationActivity extends AppCompatActivity
 
     @Override
     public void onMessageCreated() {
-        ((ConversationDisplayFragment) getSupportFragmentManager().findFragmentById(R.id.convo_view))
-                .loadConversation();
+
     }
 
 

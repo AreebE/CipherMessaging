@@ -74,8 +74,10 @@ public class LoginFragment extends Fragment {
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-
-                                Query q = new FirebaseReader().confirmUser
+                                View.OnClickListener buttonListener = this;
+                                Log.d(TAG, "confirm a click");
+                                button.setOnClickListener(null);
+                                new FirebaseReader().confirmUser
                                         (
                                                 username.getText().toString(),
                                                 password.getText().toString(),
@@ -84,45 +86,18 @@ public class LoginFragment extends Fragment {
                                                     @Override
                                                     public void notifyOnError(String message) {
                                                         Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                                                        button.setOnClickListener(buttonListener);
                                                     }
 
                                                     @Override
                                                     public void notifyOnSuccess() {
-
+                                                        loginInterface.logInUser(username.getText().toString());
+//                                                        button.setOnClickListener(buttonListener);
                                                     }
                                                 },
                                                 getContext()
                                         );
-                                if (q == null)
-                                {
-                                    return;
-                                }
-                                q.get()
-                                        .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                            @Override
-                                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                                Log.d(TAG, "Completed");
-                                                if (task.isSuccessful())
-                                                {
-                                                    Log.d(TAG, "was successful");
-                                                    QuerySnapshot documents = task.getResult();
-                                                    for (QueryDocumentSnapshot doc: documents)
-                                                    {
-                                                        loginInterface.logInUser(doc.getString(FirebaseReader.USERNAME_KEY));
-                                                        //                                                        Log.d(TAG, doc.getId() + " and " + doc.getData());
-                                                    }
-                                                    if (documents.isEmpty())
-                                                    {
-//                                                        Log.d(TAG, "nothing found");
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    Log.d(TAG, "couldn't get documents due to " + task.getException().toString());
-                                                }
-                                            }
-                                        });
-                            }
+                    }
                         });
         Button create = (Button) v.findViewById(R.id.createUser);
         create.setOnClickListener(new View.OnClickListener() {

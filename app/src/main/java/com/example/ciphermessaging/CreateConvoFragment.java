@@ -102,6 +102,7 @@ public class CreateConvoFragment extends DialogFragment
     @Override
     public void notifyOnSuccess() {
         Log.d(TAG, "called the notify");
+        ((CreateConvoListener) getActivity()).onSuccessfulCreation();
         dismiss();
     }
 }

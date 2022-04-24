@@ -1,10 +1,14 @@
 package com.example.ciphermessaging;
 
+import android.app.Activity;
+import android.content.Context;
 import android.media.Image;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 
+import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,11 +28,15 @@ import java.util.List;
  * create an instance of this fragment.
  */
 public class CreateMessageFragment extends Fragment {
-
+    private static Handler handler = new Handler();
+    private static final String TAG = "CreateMessageFrag";
+    private boolean inSendingTextState = false;
     public interface MessageCreatedListener
     {
         public void onMessageCreated();
     }
+
+
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String SENDER_KEY = "sender";
@@ -65,14 +73,23 @@ public class CreateMessageFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+
         View v = inflater.inflate(R.layout.fragment_create_message, container, false);
         EditText contentView = (EditText) v.findViewById(R.id.messageContent);
         ImageButton submitMessage = (ImageButton) v.findViewById(R.id.messageSendButton);
-        submitMessage.setOnClickListener(new View.OnClickListener()
-        {
+        submitMessage.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view)
-            {
+            public void onClick(View view) {
+                View.OnClickListener clickListener = this;
+                submitMessage.setOnClickListener(null);
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        submitMessage.setOnClickListener(clickListener);
+                    }
+                }, 1000);
+                Log.d(TAG, "clicked message");
+                submitMessage.setClickable(false);
 
                 String content = contentView.getText().toString();
                 if (content.length() == 0)
@@ -89,6 +106,7 @@ public class CreateMessageFragment extends Fragment {
                                 new FirebaseReader.FirebaseReaderListener() {
                                     @Override
                                     public void notifyOnError(String message) {
+//                                        Log.d(TAG, message);
                                         Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
                                     }
 
@@ -99,6 +117,8 @@ public class CreateMessageFragment extends Fragment {
                                 },
                                 getContext()
                         );
+
+
             }
         });
         return v;

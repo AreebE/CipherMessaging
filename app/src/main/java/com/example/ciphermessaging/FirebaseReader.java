@@ -6,6 +6,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.util.Log;
 
+import androidx.annotation.LongDef;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -16,6 +17,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
@@ -137,11 +139,13 @@ public class FirebaseReader {
 
     public void getMessages(
             String convoID,
+            int startIndex,
             ArrayList<ConversationDisplayFragment.MessageItem> items,
             FirebaseReaderListener messagingFragment,
             Context context
             )
     {
+
         if (!isInternetEnabled(context))
         {
             messagingFragment.notifyOnError("No connection to the internet.");
@@ -155,8 +159,15 @@ public class FirebaseReader {
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         DocumentSnapshot conversation = task.getResult();
                         List<DocumentReference> messageLinks = (List<DocumentReference>) conversation.get(MESSAGES_KEY);
+                        for (int i = items.size(); i < messageLinks.size(); i++)
+                        {
+                           items.add(i, null);
+                        }
+                        final int[] loadedItems = {0};
                         for (int i = 0; i < messageLinks.size(); i++)
                         {
+//                            Log.d(TAG, messageLinks.size() + " eee");
+                            int finalI = i;
                             database.collection(MESSAGES_DATABASE)
                                     .document(messageLinks.get(i).getId())
                                     .get()
@@ -167,11 +178,21 @@ public class FirebaseReader {
                                             String content = message.getString(CONTENT_KEY);
                                             String sender = message.getString(SENDER_KEY);
                                             Date timeStamp = message.getDate(TIME_KEY);
-                                            items.add(new ConversationDisplayFragment.MessageItem(sender, timeStamp, content));
-                                            messagingFragment.notifyOnSuccess();
+                                            items.set(finalI, new ConversationDisplayFragment.MessageItem(sender, timeStamp, content));
+                                            loadedItems[0]++;
+                                            Log.d(TAG, startIndex + ", " + items.size() + ", " + messageLinks.size());
+                                            if (loadedItems[0] == messageLinks.size())
+                                            {
+                                                Log.d(TAG, "found all items");
+                                                messagingFragment.notifyOnSuccess();
+                                            }
                                         }
                                     });
                         }
+//                        if (items.size() == messageLinks.size())
+//                        {
+//                            messagingFragment.notifyOnSuccess();
+//                        }
                     }
                 });
     }
@@ -233,7 +254,7 @@ public class FirebaseReader {
         //        database.collection("users");
     }
 
-    public Query confirmUser(
+    public void confirmUser(
             String username,
             String password,
             FirebaseReaderListener listener,
@@ -241,11 +262,35 @@ public class FirebaseReader {
         if (!isInternetEnabled(context))
         {
             listener.notifyOnError("No connection to the internet.");
-            return null;
+            return;
         }
-        return database.collection(USERNAME_DATABASE)
+        database.collection(USERNAME_DATABASE)
                 .whereEqualTo(USERNAME_KEY, username)
-                .whereEqualTo(PASSWORD_KEY, password);
+                .whereEqualTo(PASSWORD_KEY, password)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful())
+                        {
+                            Log.d(TAG, "was successful");
+                            QuerySnapshot documents = task.getResult();
+                            for (QueryDocumentSnapshot doc: documents)
+                            {
+                                listener.notifyOnSuccess();
+                            }
+                            if (documents.isEmpty())
+                            {
+                                listener.notifyOnError("Could not find the user.");
+                            }
+                        }
+                        else
+                        {
+                            listener.notifyOnError("Could not access database.");
+//                            Log.d(TAG, "couldn't get documents due to " + task.getException().toString());
+                        }
+                    }
+                });
 
     }
 
@@ -377,13 +422,20 @@ public class FirebaseReader {
 
     public boolean isInternetEnabled(Context context)
     {
-        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        Network network = manager.getActiveNetwork();
-        if (network != null)
+        try
         {
-            return manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    && manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            Network network = manager.getActiveNetwork();
+            if (network != null)
+            {
+                return manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        && manager.getNetworkCapabilities(network).hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            }
+            return false;
+        } catch (NullPointerException npe)
+        {
+            return false;
         }
-        return false;
+
     }
 }

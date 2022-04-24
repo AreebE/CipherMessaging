@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.ListFragment;
 
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -23,6 +24,7 @@ import com.google.android.material.tabs.TabLayout;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -40,8 +42,9 @@ import java.util.List;
 public class ConversationDisplayFragment extends ListFragment
 {
 
+    private static final Handler handler = new Handler();
     private static final String TAG = "ConversationDisplayFrag";
-
+    private int numLoaded = 0;
     public static class MessageItem
         implements Comparable<MessageItem>
     {
@@ -74,6 +77,14 @@ public class ConversationDisplayFragment extends ListFragment
             return 1 * this.timestamp.compareTo(messageItem.getTimestamp());
         }
     }
+
+    private Runnable conversationLoader = new Runnable() {
+        @Override
+        public void run() {
+            Log.d(TAG, "ccalled conversation loader");
+            loadConversation(numLoaded);
+        }
+    };
 
     private static final String USERNAME_KEY = "username";
     private static final String CONVERSATION_KEY = "conversation";
@@ -113,16 +124,21 @@ public class ConversationDisplayFragment extends ListFragment
     @Override
     public void onResume() {
         super.onResume();
+        numLoaded = 0;
+        MessageAdapter adapter = new MessageAdapter(getActivity(), new ArrayList<MessageItem>());
+        setListAdapter(adapter);
         Log.d(TAG, "on resume");
-        loadConversation();
+        handler.post(conversationLoader);
     }
 
 
 
     public class MessageAdapter extends ArrayAdapter<MessageItem>
     {
+        private List<MessageItem> items;
         public MessageAdapter(@NonNull Context context, @NonNull List<MessageItem> objects) {
             super(context, R.layout.message_item, objects);
+            this.items = objects;
         }
 
         @NonNull
@@ -133,54 +149,60 @@ public class ConversationDisplayFragment extends ListFragment
             {
                 getListView().setSelection(position);
             }
-            if (convertView != null)
+            if (convertView == null)
             {
-                TextView textContentView = (TextView) convertView.findViewById(R.id.contentDisplay);
-                textContentView.setText(currentItem.getContent());
-                return convertView;
+                convertView = getLayoutInflater().inflate(R.layout.message_item, null);
             }
 
-            convertView = getLayoutInflater().inflate(R.layout.message_item, null);
 
 //            Log.d(TAG, "creating a view");
             LinearLayout layout = (LinearLayout) convertView;
             TextView textContentView = (TextView) convertView.findViewById(R.id.contentDisplay);
             textContentView.setText(currentItem.getContent());
+            Log.d(TAG, "position = " + position + "; current item: " + currentItem.getContent() + ", " + currentItem.getSender() + ". "+  thisUser );
+//            TextView timeStamp = new TextView(getActivity());
+//            timeStamp.setText(currentItem.getTimestamp().toString());
+//            LinearLayout.LayoutParams timeStampParameters = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
+//            timeStamp.setLayoutParams(timeStampParameters);
+//            timeStamp.setMaxWidth((int) getResources().getDimension(R.dimen.dateSpace));
+//            timeStamp.setGravity(Gravity.CENTER);
 
-            TextView timeStamp = new TextView(getActivity());
-            timeStamp.setText(currentItem.getTimestamp().toString());
-            LinearLayout.LayoutParams timeStampParameters = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            timeStamp.setLayoutParams(timeStampParameters);
-            timeStamp.setMaxWidth((int) getResources().getDimension(R.dimen.dateSpace));
-            timeStamp.setGravity(Gravity.CENTER);
-
-             if (!currentItem.getSender().equals(thisUser))
+             if (currentItem.getSender().equals(thisUser))
             {
-                layout.addView(timeStamp, 1);
-//                layout.addView(spacer, 2);
-            }
-            else
-            {
-                layout.addView(timeStamp, 0);
+                Log.d(TAG, "Assigning the blue to " + currentItem.getContent());
+//                layout.addView(timeStamp, 0);
 //                layout.addView(spacer, 0);
                 layout.setGravity(Gravity.RIGHT);
 
                 textContentView.setBackground(getResources().getDrawable(R.drawable.text_user_background));
 
             }
+             else
+             {
+                 layout.setGravity(Gravity.LEFT);
+
+                 textContentView.setBackground(getResources().getDrawable(R.drawable.text_background));
+             }
 //            Log.d(TAG, "Called a get view." + currentItem.getContent() +"," + position);
 
             return convertView;
         }
+
+        public List<MessageItem> getItems() {
+            return items;
+        }
     }
 
-    public void loadConversation()
+
+
+    private void loadConversation(int numToLoad)
     {
         ArrayList<MessageItem> items = new ArrayList<>();
-//        MessageAdapter adapter = new MessageAdapter(getActivity(), items);
+        MessageAdapter adapter = (MessageAdapter) getListAdapter();
 //        setListAdapter(adapter);
-        Log.d(TAG, convoID + "loading convo");
-        new FirebaseReader().getMessages(convoID, items, new FirebaseReader.FirebaseReaderListener() {
+//        Log.d(TAG, convoID + "loading convo");
+
+        new FirebaseReader().getMessages(convoID, numToLoad, items, new FirebaseReader.FirebaseReaderListener() {
             @Override
             public void notifyOnError(String message) {
 
@@ -188,15 +210,55 @@ public class ConversationDisplayFragment extends ListFragment
 
             @Override
             public void notifyOnSuccess() {
-                MessageAdapter adapter = new MessageAdapter(getActivity(), items);
-                Collections.sort(items);
-                for (int i = 0; i < items.size(); i++)
+//                Log.d(TAG, "notified the success");
+                if (items.size() != adapter.getCount())
                 {
-                    Log.d(TAG, items.get(i).content);
+                    String itemsList = "";
+                    for (int j = 0; j < items.size(); j++)
+                    {
+                        itemsList += "\" " + items.get(j).getContent() + " \", ";
+                    }
+                    Log.d(TAG, "All items:" + itemsList);
+
+                    for (int i = 0; i < items.size() - numLoaded; i++)
+                    {
+                        Log.d(TAG, "Adding item: " + items.get(i).getContent() + "," + items.get(i).getSender());
+                        adapter.add(items.get(i));
+
+                        adapter.sort(new Comparator<MessageItem>() {
+                            @Override
+                            public int compare(MessageItem messageItem, MessageItem t1) {
+                                return messageItem.compareTo(t1);
+                            }
+                        });
+                    }
+                    numLoaded = adapter.getCount();
+                    synchronized (adapter)
+                    {
+                        adapter.notifyDataSetChanged();
+                    }
+
                 }
-                setListAdapter(adapter);
+
+//                Log.d(TAG, "items found = " + items.size());
+
+                handler.postDelayed(conversationLoader, 1000);
+
             }
         },
                 getContext());
+    }
+
+
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        handler.removeCallbacks(conversationLoader);
+    }
+
+    public int getNumLoaded()
+    {
+        return numLoaded;
     }
 }

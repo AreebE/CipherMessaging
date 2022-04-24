@@ -6,16 +6,21 @@ import androidx.fragment.app.FragmentManager;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Toast;
 
 //import com.apollographql.apollo3.ApolloClient;
+
+import com.google.android.material.tabs.TabLayout;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity
         implements FirebaseReader.FirebaseReaderListener,
-        LoginFragment.LoginInterface{
+        LoginFragment.LoginInterface,
+        CreateConvoFragment.CreateConvoListener{
+    private static final String TAG = "MainActivity";
 //m;l
 
     private Runnable backgroundRunner = new Runnable() {
@@ -54,8 +59,15 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void logInUser(String username) {
+//        Log.d(TAG, "trying to log in user");
         FragmentManager manager = getSupportFragmentManager();
         manager.beginTransaction().replace(R.id.fragment_container, ContactsFragment.newInstance(username)).commit();
 
+    }
+
+    @Override
+    public void onSuccessfulCreation() {
+        FragmentManager manager = getSupportFragmentManager();
+        ((ContactsFragment) manager.findFragmentById(R.id.fragment_container)).loadConversations();
     }
 }
