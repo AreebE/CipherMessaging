@@ -145,10 +145,7 @@ public class ConversationDisplayFragment extends ListFragment
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
             MessageItem currentItem = getItem(position);
-            if (position == getCount() - 1)
-            {
-                getListView().setSelection(position);
-            }
+
             if (convertView == null)
             {
                 convertView = getLayoutInflater().inflate(R.layout.message_item, null);
@@ -236,6 +233,7 @@ public class ConversationDisplayFragment extends ListFragment
                     synchronized (adapter)
                     {
                         adapter.notifyDataSetChanged();
+                        getListView().setSelection(adapter.getCount() - 1);
                     }
 
                 }
