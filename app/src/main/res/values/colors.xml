@@ -11,4 +11,5 @@
     <color name="light_gray">#FFBBBBBB</color>
     <color name="user_color">#94E6DD</color>
     <color name="user_text">#2B271C</color>
+    <color name="badge_color">#FF9B30</color>
 </resources>

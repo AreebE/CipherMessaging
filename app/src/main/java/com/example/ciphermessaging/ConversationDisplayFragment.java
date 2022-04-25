@@ -22,6 +22,7 @@ import android.widget.TextView;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -126,6 +127,7 @@ public class ConversationDisplayFragment extends ListFragment
         super.onResume();
         numLoaded = 0;
         MessageAdapter adapter = new MessageAdapter(getActivity(), new ArrayList<MessageItem>());
+        new FirebaseReader().updateDate(thisUser, convoID, Calendar.getInstance().getTime());
         setListAdapter(adapter);
         Log.d(TAG, "on resume");
         handler.post(conversationLoader);
@@ -253,6 +255,7 @@ public class ConversationDisplayFragment extends ListFragment
     public void onPause() {
         super.onPause();
         handler.removeCallbacks(conversationLoader);
+        new FirebaseReader().updateDate(thisUser, convoID, Calendar.getInstance().getTime());
     }
 
     public int getNumLoaded()

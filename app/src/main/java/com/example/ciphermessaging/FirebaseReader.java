@@ -13,6 +13,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -47,9 +48,12 @@ public class FirebaseReader {
 
     public static final String USERNAME_KEY = "username";
     public static final String CONVERSATIONS_KEY = "conversations";
+    private static final int CONVO_KEY = 0;
+    private static final int MOST_RECENT_KEY = 1;
     public static final String PASSWORD_KEY = "password";
     public static final String LAST_NAME_KEY = "last";
     public static final String FIRST_NAME_KEY = "first";
+    private static final String DATE_SEEN_KEY = "last seen";
 
     public void createConvo(
             String username,
@@ -110,7 +114,8 @@ public class FirebaseReader {
                             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                                 DocumentSnapshot user = task.getResult().getDocuments().get(0);
                                 Map<String, Object> objects = user.getData();
-                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(ref);
+                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(0, ref);
+                                ((Map<String, Date>) objects.get(DATE_SEEN_KEY)).put(ref.getId(), null);
                                 database.collection(USERNAME_DATABASE).document(user.getId()).update(objects)
                                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                                     @Override
@@ -127,7 +132,8 @@ public class FirebaseReader {
                             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                                 DocumentSnapshot user = task.getResult().getDocuments().get(0);
                                 Map<String, Object> objects = user.getData();
-                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(ref);
+                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(0, ref);
+                                ((Map<String, Date>) objects.get(DATE_SEEN_KEY)).put(ref.getId(), null);
                                 database.collection(USERNAME_DATABASE).document(user.getId()).update(objects);
 
                             }
@@ -319,6 +325,7 @@ public class FirebaseReader {
                         put(LAST_NAME_KEY, lastName);
                         put(PASSWORD_KEY, password);
                         put(CONVERSATIONS_KEY, new ArrayList<>());
+                        put(DATE_SEEN_KEY, new HashMap<>());
                     }};
                     database.collection("users")
                             .add(userData)
@@ -348,6 +355,7 @@ public class FirebaseReader {
             }
         });
     }
+
     public void getConversations(
             String username,
             ArrayList<ContactsFragment.ConversationItem> items,
@@ -370,9 +378,20 @@ public class FirebaseReader {
                         DocumentSnapshot document = task.getResult().getDocuments().get(0);
                         int count = 0;
                         List<DocumentReference> convosIDs = (List<DocumentReference>) document.get(CONVERSATIONS_KEY);
-                        for (DocumentReference docRef: convosIDs)
+                        Map<String, Timestamp> dates = (Map<String, Timestamp>) document.get(DATE_SEEN_KEY);
+                        for (int i = 0; i < convosIDs.size(); i ++)
                         {
+                            DocumentReference docRef = convosIDs.get(i);
+                            Date mostRecentChanged = null;
+                            try
+                            {
+                                mostRecentChanged = dates.get(docRef.getId()).toDate();
+                            } catch (NullPointerException npe)
+                            {
+
+                            }
                             Log.d(TAG,  "\"" + docRef.getId() + "\"");
+                            Date finalMostRecentChanged = mostRecentChanged;
                             database.collection(CONVERSATIONS_DATABASE)
                                     .document(docRef.getId())
                                     .get()
@@ -386,14 +405,11 @@ public class FirebaseReader {
                                             Log.d(TAG, id);
                                             List<String> users = (List<String>) convo.get(USERS_KEY);
                                             int name = (users.get(0).equals(username))? 1: 0;
-                                            items.add(new ContactsFragment.ConversationItem(id, users.get(name), title));
+                                            items.add(new ContactsFragment.ConversationItem(id, (String) users.get(name), title, finalMostRecentChanged));
                                             listener.notifyOnSuccess();
                                         }
                                     });
-                            while(count != items.size())
-                            {
 
-                            }
                             listener.notifyOnSuccess();
                         }
                     }
@@ -419,6 +435,88 @@ public class FirebaseReader {
 //                        }
 //                    }
 //                });
+
+    public void updateDate(
+            String username,
+            String convoKey,
+            Date newDate
+    )
+    {
+        database.collection(USERNAME_DATABASE)
+                .whereEqualTo(USERNAME_KEY, username)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        DocumentSnapshot document = task.getResult().getDocuments().get(0);
+                        Map<String, Object> data = document.getData();
+                        List<DocumentReference> convos = (List<DocumentReference>) data.get(CONVERSATIONS_KEY);
+
+                        Map<String, Timestamp> lastSeenDates = (Map<String, Timestamp>) data.get(DATE_SEEN_KEY);
+                        for (int i = 0; i < convos.size(); i++)
+                        {
+                            if (convos.get(i).getId().equals(convoKey))
+                            {
+                                lastSeenDates.put(convoKey, new Timestamp(newDate));
+                                database.collection(USERNAME_DATABASE)
+                                        .document(document.getId())
+                                        .update(data);
+                                break;
+                            }
+                        }
+                    }
+                });
+    }
+
+    public void compareToFirstMessage(
+            String convoID,
+            Date userDate,
+            FirebaseReaderListener listener
+    )
+    {
+        if (userDate == null)
+        {
+            listener.notifyOnSuccess();
+            return;
+        }
+        Log.d(TAG, userDate.toString());
+        database.collection(CONVERSATIONS_DATABASE)
+                .document(convoID)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        DocumentSnapshot snapshot = task.getResult();
+                        String firstMessage = null;
+                        try
+                        {
+                            firstMessage = ((List<DocumentReference>) snapshot.get(MESSAGES_KEY)).get(0).getId();
+                        } catch (IndexOutOfBoundsException ioobe)
+                        {
+                            listener.notifyOnSuccess();
+                            return;
+                        }
+                        database.collection(MESSAGES_DATABASE)
+                                .document(firstMessage)
+                                .get()
+                                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                        DocumentSnapshot message = task.getResult();
+                                        Log.d(TAG, message.getString(CONTENT_KEY) + ", " + ((Timestamp) message.get(TIME_KEY)).toDate() + "; " + userDate);
+                                        if (((Timestamp) message.get(TIME_KEY)).toDate().compareTo(userDate) > 0)
+                                        {
+                                            listener.notifyOnSuccess();
+                                        }
+                                        else
+                                        {
+                                            listener.notifyOnError("");
+                                        }
+                                    }
+                                });
+                    }
+                });
+    }
 
     public boolean isInternetEnabled(Context context)
     {

@@ -3,6 +3,7 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/drawable/badge.xml" value="0.133" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/drawable/ic_launcher_background.xml" value="0.1" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/drawable/text_background.xml" value="0.189" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/drawable/text_user_background.xml" value="0.189" />
@@ -13,6 +14,7 @@
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_contacts.xml" value="0.1" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_conversation.xml" value="0.25" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_create_convo.xml" value="0.1" />
+        <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_create_message.xml" value="0.12239583333333333" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_create_user.xml" value="0.16" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_login.xml" value="0.1" />
         <entry key="..\:/Users/Areeb Emran/AndroidStudioProjects/CipherMessaging/app/src/main/res/layout/fragment_messaging.xml" value="0.25" />

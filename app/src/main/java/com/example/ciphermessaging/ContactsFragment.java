@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.ListFragment;
 import androidx.recyclerview.widget.ListAdapter;
 
+import android.os.Handler;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -20,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,6 +35,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firestore.v1.Document;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -46,6 +49,8 @@ import java.util.List;
  */
 public class ContactsFragment extends ListFragment
         implements CreateConvoFragment.CreateConvoListener{
+
+    private Handler handler = new Handler();
     private static final String TAG = "ContactsFragment";
 
     @Override
@@ -59,12 +64,13 @@ public class ContactsFragment extends ListFragment
         private String idOfConvo;
         private String nameOfOther;
         private String convoName;
-
-        public ConversationItem(String id, String name, String convoName)
+        private Date mostRecent;
+        public ConversationItem(String id, String name, String convoName, Date date)
         {
             this.idOfConvo = id;
             this.nameOfOther = name;
             this.convoName = convoName;
+            this.mostRecent = date;
         }
 
         public String getID()
@@ -81,6 +87,8 @@ public class ContactsFragment extends ListFragment
         {
             return convoName;
         }
+
+        public Date getDate() {return mostRecent;}
     }
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -136,6 +144,7 @@ public class ContactsFragment extends ListFragment
             Toast.makeText(getActivity(), "The internet is not working.", Toast.LENGTH_SHORT).show();
             return;
         }
+        handler.removeCallbacksAndMessages(null);
         String convoID = ((ConversationItem) getListAdapter().getItem(position)).getID();
         Intent i = new Intent(getActivity(), ConversationActivity.class);
         Log.d(TAG, "item cliekc");
@@ -148,6 +157,7 @@ public class ContactsFragment extends ListFragment
     @Override
     public void onResume() {
         super.onResume();
+//        Log.d(TAG, "loading convos");
         loadConversations();
     }
 
@@ -187,18 +197,52 @@ public class ContactsFragment extends ListFragment
 
         public ContactAdapter(@NonNull Context context, @NonNull List<ConversationItem> objects) {
             super(context, R.layout.conversation_item, objects);
+            Log.d(TAG, "new id created");
         }
 
         @NonNull
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
             convertView = getLayoutInflater().inflate(R.layout.conversation_item, null);
+            ImageView badge = (ImageView) convertView.findViewById(R.id.badge_display);
+            badge.setVisibility(View.INVISIBLE);
             TextView name = (TextView) convertView.findViewById(R.id.other_user);
             TextView convo = (TextView) convertView.findViewById(R.id.convo_name);
-            name.setText(this.getItem(position).getName());
+            ConversationItem conversationItem = this.getItem(position);
+            name.setText(conversationItem.getName());
+            Runnable badgeUpdater = null;
+//            Log.d(TAG, "creating");
+            badgeUpdater = new Runnable() {
+                @Override
+                public void run() {
+                    new FirebaseReader().compareToFirstMessage
+                            (
+                                    conversationItem.getID(),
+                                    conversationItem.getDate(),
+                                    new FirebaseReader.FirebaseReaderListener() {
+                                        @Override
+                                        public void notifyOnError(String message) {
+                                            postDelay();
+                                        }
 
-            System.out.println(this.getItem(position).getName());
-            convo.setText(this.getItem(position).getConvoName());
+                                        @Override
+                                        public void notifyOnSuccess() {
+                                            badge.setVisibility(View.VISIBLE);
+                                        }
+                                    }
+                            );
+                }
+
+                private void postDelay()
+                {
+                    Log.d(TAG, "testing the delay");
+                    handler.postDelayed(this, 1000);
+                }
+            };
+            handler.post(badgeUpdater);
+
+            System.out.println(conversationItem.getName());
+            convo.setText(conversationItem.getConvoName());
             return convertView;
         }
 
@@ -216,6 +260,8 @@ public class ContactsFragment extends ListFragment
 
             @Override
             public void notifyOnSuccess() {
+                handler.removeCallbacksAndMessages(null);
+                Log.d(TAG, "finished loading");
                 ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), items));
 
 //                getListAdapter().notify();
