@@ -40,6 +40,8 @@ import java.util.List;
  * Use the {@link ConversationDisplayFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
+
+// fix bug where user does not see first few messages made
 public class ConversationDisplayFragment extends ListFragment
 {
 
@@ -135,6 +137,7 @@ public class ConversationDisplayFragment extends ListFragment
 
 
 
+
     public class MessageAdapter extends ArrayAdapter<MessageItem>
     {
         private List<MessageItem> items;
@@ -212,16 +215,17 @@ public class ConversationDisplayFragment extends ListFragment
 //                Log.d(TAG, "notified the success");
                 if (items.size() != adapter.getCount())
                 {
-                    String itemsList = "";
-                    for (int j = 0; j < items.size(); j++)
-                    {
-                        itemsList += "\" " + items.get(j).getContent() + " \", ";
-                    }
-                    Log.d(TAG, "All items:" + itemsList);
+                    new FirebaseReader().updateDate(thisUser, convoID, Calendar.getInstance().getTime());
+//                    String itemsList = "";
+//                    for (int j = 0; j < items.size(); j++)
+//                    {
+//                        itemsList += "\" " + items.get(j).getContent() + " \", ";
+//                    }
+//                    Log.d(TAG, "All items:" + itemsList);
 
                     for (int i = 0; i < items.size() - numLoaded; i++)
                     {
-                        Log.d(TAG, "Adding item: " + items.get(i).getContent() + "," + items.get(i).getSender());
+//                        Log.d(TAG, "Adding item: " + items.get(i).getContent() + "," + items.get(i).getSender());
                         adapter.add(items.get(i));
 
                         adapter.sort(new Comparator<MessageItem>() {
@@ -254,7 +258,7 @@ public class ConversationDisplayFragment extends ListFragment
     @Override
     public void onPause() {
         super.onPause();
-        handler.removeCallbacks(conversationLoader);
+        handler.removeCallbacks(null);
         new FirebaseReader().updateDate(thisUser, convoID, Calendar.getInstance().getTime());
     }
 

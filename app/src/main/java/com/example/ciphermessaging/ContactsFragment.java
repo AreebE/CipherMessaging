@@ -47,11 +47,23 @@ import java.util.List;
  * Use the {@link ContactsFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
+
+// have refreshing convos
+    // had badge disappear after displaying (maybe not automatic?)
 public class ContactsFragment extends ListFragment
         implements CreateConvoFragment.CreateConvoListener{
 
     private Handler handler = new Handler();
     private static final String TAG = "ContactsFragment";
+
+    private Runnable convoLoader = new Runnable() {
+        @Override
+        public void run() {
+            loadConversations();
+            handler.postDelayed(this, 1000);
+        }
+    };
+    private int itemsLoaded;
 
     @Override
     public void onSuccessfulCreation() {
@@ -98,6 +110,8 @@ public class ContactsFragment extends ListFragment
     private String username;
 //    private String mParam2;
 
+
+
     public ContactsFragment() {
         // Required empty public constructor
     }
@@ -126,8 +140,7 @@ public class ContactsFragment extends ListFragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_contacts, container, false);
-        loadConversations();
-
+        handler.post(convoLoader);
         return v;
     }
 
@@ -158,7 +171,9 @@ public class ContactsFragment extends ListFragment
     public void onResume() {
         super.onResume();
 //        Log.d(TAG, "loading convos");
-        loadConversations();
+        ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), new ArrayList<ConversationItem>()));
+        itemsLoaded = 0;
+        handler.post(convoLoader);
     }
 
     /* The menus */
@@ -215,6 +230,14 @@ public class ContactsFragment extends ListFragment
             badgeUpdater = new Runnable() {
                 @Override
                 public void run() {
+                    synchronized (this)
+                    {
+                        try {
+                            wait(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     new FirebaseReader().compareToFirstMessage
                             (
                                     conversationItem.getID(),
@@ -260,11 +283,19 @@ public class ContactsFragment extends ListFragment
 
             @Override
             public void notifyOnSuccess() {
-                handler.removeCallbacksAndMessages(null);
                 Log.d(TAG, "finished loading");
-                ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), items));
-
-//                getListAdapter().notify();
+                if (itemsLoaded != items.size())
+                {
+                    for (int i = 0; i < items.size() - itemsLoaded; i++)
+                    {
+                        ((ContactAdapter) getListAdapter()).add(items.get(i));
+                    }
+                }
+                itemsLoaded = items.size();
+                synchronized (getListAdapter())
+                {
+                    ((ContactAdapter) getListAdapter()).notifyDataSetChanged();
+                }
             }
         },
                 getContext());

@@ -376,11 +376,16 @@ public class FirebaseReader {
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         DocumentSnapshot document = task.getResult().getDocuments().get(0);
-                        int count = 0;
+                        final int[] count = {0};
                         List<DocumentReference> convosIDs = (List<DocumentReference>) document.get(CONVERSATIONS_KEY);
+                        for (int i = 0; i < convosIDs.size(); i++)
+                        {
+                            items.add(0, null);
+                        }
                         Map<String, Timestamp> dates = (Map<String, Timestamp>) document.get(DATE_SEEN_KEY);
                         for (int i = 0; i < convosIDs.size(); i ++)
                         {
+                            final int index = i;
                             DocumentReference docRef = convosIDs.get(i);
                             Date mostRecentChanged = null;
                             try
@@ -390,7 +395,7 @@ public class FirebaseReader {
                             {
 
                             }
-                            Log.d(TAG,  "\"" + docRef.getId() + "\"");
+//                            Log.d(TAG,  "\"" + docRef.getId() + "\"");
                             Date finalMostRecentChanged = mostRecentChanged;
                             database.collection(CONVERSATIONS_DATABASE)
                                     .document(docRef.getId())
@@ -405,12 +410,16 @@ public class FirebaseReader {
                                             Log.d(TAG, id);
                                             List<String> users = (List<String>) convo.get(USERS_KEY);
                                             int name = (users.get(0).equals(username))? 1: 0;
-                                            items.add(new ContactsFragment.ConversationItem(id, (String) users.get(name), title, finalMostRecentChanged));
-                                            listener.notifyOnSuccess();
+                                            items.set(index, new ContactsFragment.ConversationItem(id, (String) users.get(name), title, finalMostRecentChanged));
+                                            count[0]++;
+                                            if (count[0] == items.size())
+                                            {
+                                                listener.notifyOnSuccess();
+                                            }
+
                                         }
                                     });
 
-                            listener.notifyOnSuccess();
                         }
                     }
                 });
