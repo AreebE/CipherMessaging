@@ -30,23 +30,9 @@
         android:layout_weight="1"
         android:hint="@string/passwordHint"
         android:layout_margin="8dp"
-        android:gravity="center"/>
+        android:gravity="center"
+        android:inputType="textPassword"/>
 
-    <EditText android:id="@+id/firstName"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:hint="@string/firstNameHint"
-        android:layout_margin="8dp"
-        android:gravity="center"/>
-
-    <EditText android:id="@+id/lastName"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:hint="@string/lastNameHint"
-        android:layout_margin="8dp"
-        android:gravity="center"/>
 
     <Button android:id="@+id/submitButton"
         android:layout_width="wrap_content"

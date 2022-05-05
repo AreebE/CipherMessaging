@@ -21,7 +21,9 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -38,22 +40,22 @@ public class FirebaseReader {
     public static final String TIME_KEY = "time";
 
     public static final String CONVERSATIONS_DATABASE = "conversations";
-    public static final String USERS_KEY = "users";
     public static final String CIPHER_KEY = "cipher";
+    private static final String LIST_OF_MESSAGES_KEY= "convoID";
+    private static final String LAST_TIME_SENT_KEY = "lastTimeSent";
     public static final String TITLE_KEY = "title";
-    public static final String MESSAGES_KEY = "convo";
-
+    public static final String USERS_KEY = "users";
 
     private static final String USERNAME_DATABASE = "users";
-
-    public static final String USERNAME_KEY = "username";
-    public static final String CONVERSATIONS_KEY = "conversations";
-    private static final int CONVO_KEY = 0;
-    private static final int MOST_RECENT_KEY = 1;
+    public static final String CONVERSATIONS_KEY = "convos";
+    public static final String LAST_SEEN_KEY = "lastSeen";
+    private static final String CONVO_ID_KEY = "convoID";
     public static final String PASSWORD_KEY = "password";
-    public static final String LAST_NAME_KEY = "last";
-    public static final String FIRST_NAME_KEY = "first";
-    private static final String DATE_SEEN_KEY = "last seen";
+    public static final String USERNAME_KEY = "username";
+
+
+    private static final String MESSAGE_LIST_DATABASE = "MessageList";
+    private static final String MESSAGES_LINK = "messages";
 
     public void createConvo(
             String username,
@@ -90,7 +92,6 @@ public class FirebaseReader {
             String conversationTitle,
             FirebaseReaderListener listener)
     {
-
         Map<String, Object> convoData = new HashMap<>();
         convoData.put(USERS_KEY, new ArrayList<String>(){
             {
@@ -100,51 +101,75 @@ public class FirebaseReader {
         });
         convoData.put(TITLE_KEY, conversationTitle);
         convoData.put(CIPHER_KEY, "1234567890abcdefghijklmnopqrstuvwxyz");
-        convoData.put(MESSAGES_KEY, new ArrayList<DocumentReference>());
-        database.collection(CONVERSATIONS_DATABASE)
-                .add(convoData)
+
+        Map<String, Object> messageListData = new HashMap<>();
+        messageListData.put(MESSAGES_LINK, new ArrayList<DocumentReference>());
+        database.collection("MessageList")
+                .add(messageListData)
                 .addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
                     @Override
                     public void onComplete(@NonNull Task<DocumentReference> task) {
-                        DocumentReference ref = task.getResult();
-                        database.collection(USERNAME_DATABASE)
-                                .whereEqualTo(USERNAME_KEY, username)
-                                .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                            @Override
-                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                DocumentSnapshot user = task.getResult().getDocuments().get(0);
-                                Map<String, Object> objects = user.getData();
-                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(0, ref);
-                                ((Map<String, Date>) objects.get(DATE_SEEN_KEY)).put(ref.getId(), null);
-                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects)
-                                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        convoData.put(CONVO_ID_KEY, task.getResult());
+                        Date currentDate = Calendar.getInstance().getTime();
+                        convoData.put(LAST_TIME_SENT_KEY, currentDate);
+                        database.collection(CONVERSATIONS_DATABASE)
+                                .add(convoData)
+                                .addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
                                     @Override
-                                    public void onComplete(@NonNull Task<Void> task) {
-                                        listener.notifyOnSuccess();
+                                    public void onComplete(@NonNull Task<DocumentReference> task) {
+                                        DocumentReference ref = task.getResult();
+                                        database.collection(USERNAME_DATABASE)
+                                                .whereEqualTo(USERNAME_KEY, username)
+                                                .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                                DocumentSnapshot user = task.getResult().getDocuments().get(0);
+                                                //
+                                                Map<String, Object> objects = user.getData();
+                                                Map<String, Object> comments = new HashMap<>();
+                                                comments.put(CONVO_ID_KEY, ref);
+                                                comments.put(LAST_SEEN_KEY, currentDate);
+                                                ((List<Map<String, Object>>) (objects.get(CONVERSATIONS_KEY))).add(0, comments);
+                                                //
+                                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects)
+                                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                            @Override
+                                                            public void onComplete(@NonNull Task<Void> task) {
+                                                                listener.notifyOnSuccess();
+                                                            }
+                                                        });
+                                            }
+                                        });
+                                        database.collection(USERNAME_DATABASE)
+                                                .whereEqualTo(USERNAME_KEY, otherUsername)
+                                                .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                                DocumentSnapshot user = task.getResult().getDocuments().get(0);
+                                                Map<String, Object> objects = user.getData();
+                                                //
+                                                Map<String, Object> comments = new HashMap<>();
+                                                Log.d(TAG, objects.toString());
+                                                comments.put(CONVO_ID_KEY, ref);
+                                                comments.put(LAST_SEEN_KEY, currentDate);
+                                                ((List<Map<String, Object>>) (objects.get(CONVERSATIONS_KEY))).add(0, comments);
+                                                Log.d(TAG, objects.toString());
+                                                //
+                                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects);
+
+                                            }
+                                        });
                                     }
                                 });
-                            }
-                        });
-                        database.collection(USERNAME_DATABASE)
-                                .whereEqualTo(USERNAME_KEY, otherUsername)
-                                .get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                            @Override
-                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                DocumentSnapshot user = task.getResult().getDocuments().get(0);
-                                Map<String, Object> objects = user.getData();
-                                ((List<DocumentReference>) objects.get(CONVERSATIONS_KEY)).add(0, ref);
-                                ((Map<String, Date>) objects.get(DATE_SEEN_KEY)).put(ref.getId(), null);
-                                database.collection(USERNAME_DATABASE).document(user.getId()).update(objects);
-
-                            }
-                        });
                     }
                 });
+
+
     }
 
 
     public void getMessages(
-            String convoID,
+            String messageID,
             int startIndex,
             ArrayList<ConversationDisplayFragment.MessageItem> items,
             FirebaseReaderListener messagingFragment,
@@ -157,14 +182,14 @@ public class FirebaseReader {
             messagingFragment.notifyOnError("No connection to the internet.");
             return;
         }
-        database.collection(CONVERSATIONS_DATABASE)
-                .document(convoID)
+        database.collection(MESSAGE_LIST_DATABASE)
+                .document(messageID)
                 .get()
                 .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         DocumentSnapshot conversation = task.getResult();
-                        List<DocumentReference> messageLinks = (List<DocumentReference>) conversation.get(MESSAGES_KEY);
+                        List<DocumentReference> messageLinks = (List<DocumentReference>) conversation.get(MESSAGES_LINK);
                         for (int i = items.size(); i < messageLinks.size(); i++)
                         {
                            items.add(i, null);
@@ -208,6 +233,7 @@ public class FirebaseReader {
             String content,
             Date timestamp,
             String convoID,
+            String messageListID,
             FirebaseReaderListener listener,
             Context context)
     {
@@ -226,21 +252,32 @@ public class FirebaseReader {
                     @Override
                     public void onComplete(@NonNull Task<DocumentReference> task) {
                         DocumentReference messageReference = task.getResult();
-                        database.collection(CONVERSATIONS_DATABASE)
-                                .document(convoID)
+                        database.collection(MESSAGE_LIST_DATABASE)
+                                .document(messageListID)
                                 .get()
                                 .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                     @Override
                                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                         Map<String, Object> convoData = task.getResult().getData();
-                                        ((List<DocumentReference>) convoData.get(MESSAGES_KEY)).add(0, messageReference);
-                                        database.collection(CONVERSATIONS_DATABASE).document(convoID).update(convoData)
+                                        ((List<DocumentReference>) convoData.get(MESSAGES_LINK)).add(0, messageReference);
+                                        database.collection(MESSAGE_LIST_DATABASE).document(messageListID).update(convoData)
                                         .addOnCompleteListener(new OnCompleteListener<Void>() {
                                             @Override
                                             public void onComplete(@NonNull Task<Void> task) {
                                                 listener.notifyOnSuccess();
                                             }
                                         });
+                                    }
+                                });
+                        database.collection(CONVERSATIONS_DATABASE)
+                                .document(convoID)
+                                .get()
+                                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                        Map<String, Object> data = task.getResult().getData();
+                                        data.put(LAST_TIME_SENT_KEY, timestamp);
+                                        database.collection(CONVERSATIONS_DATABASE).document(convoID).update(data);
                                     }
                                 });
                     }
@@ -302,8 +339,6 @@ public class FirebaseReader {
 
     public void createUser(
             String username,
-            String firstName,
-            String lastName,
             String password,
             FirebaseReaderListener listener,
             Context context)
@@ -321,11 +356,9 @@ public class FirebaseReader {
                 if (task.getResult().isEmpty()) {
                     Map<String, Object> userData = new HashMap<String, Object>() {{
                         put(USERNAME_KEY, username);
-                        put(FIRST_NAME_KEY, firstName);
-                        put(LAST_NAME_KEY, lastName);
                         put(PASSWORD_KEY, password);
-                        put(CONVERSATIONS_KEY, new ArrayList<>());
-                        put(DATE_SEEN_KEY, new HashMap<>());
+                        ArrayList<HashMap<String, Object>> convoData = new ArrayList<>();
+                        put(CONVERSATIONS_KEY, convoData);
                     }};
                     database.collection("users")
                             .add(userData)
@@ -377,26 +410,18 @@ public class FirebaseReader {
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         DocumentSnapshot document = task.getResult().getDocuments().get(0);
                         final int[] count = {0};
-                        List<DocumentReference> convosIDs = (List<DocumentReference>) document.get(CONVERSATIONS_KEY);
+                        List<Map<String, Object>> convosIDs = (List<Map<String, Object>>) document.get(CONVERSATIONS_KEY);
                         for (int i = 0; i < convosIDs.size(); i++)
                         {
                             items.add(0, null);
                         }
-                        Map<String, Timestamp> dates = (Map<String, Timestamp>) document.get(DATE_SEEN_KEY);
                         for (int i = 0; i < convosIDs.size(); i ++)
                         {
                             final int index = i;
-                            DocumentReference docRef = convosIDs.get(i);
-                            Date mostRecentChanged = null;
-                            try
-                            {
-                                mostRecentChanged = dates.get(docRef.getId()).toDate();
-                            } catch (NullPointerException npe)
-                            {
+                            DocumentReference docRef = (DocumentReference) convosIDs.get(i).get(CONVO_ID_KEY);
+                            Date mostRecentChanged = ((Timestamp) convosIDs.get(i).get(LAST_SEEN_KEY)).toDate();
 
-                            }
 //                            Log.d(TAG,  "\"" + docRef.getId() + "\"");
-                            Date finalMostRecentChanged = mostRecentChanged;
                             database.collection(CONVERSATIONS_DATABASE)
                                     .document(docRef.getId())
                                     .get()
@@ -404,13 +429,13 @@ public class FirebaseReader {
                                         @Override
                                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                             DocumentSnapshot convo = task.getResult();
-                                            System.out.println(convo.toString());
+
                                             String id = convo.getId();
                                             String title = convo.getString(TITLE_KEY);
-                                            Log.d(TAG, id);
+                                            String messageID = convo.getDocumentReference(CONVO_ID_KEY).getId();
                                             List<String> users = (List<String>) convo.get(USERS_KEY);
                                             int name = (users.get(0).equals(username))? 1: 0;
-                                            items.set(index, new ContactsFragment.ConversationItem(id, (String) users.get(name), title, finalMostRecentChanged));
+                                            items.set(index, new ContactsFragment.ConversationItem(id, (String) users.get(name), title, messageID, mostRecentChanged));
                                             count[0]++;
                                             if (count[0] == items.size())
                                             {
@@ -459,22 +484,41 @@ public class FirebaseReader {
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         DocumentSnapshot document = task.getResult().getDocuments().get(0);
                         Map<String, Object> data = document.getData();
-                        List<DocumentReference> convos = (List<DocumentReference>) data.get(CONVERSATIONS_KEY);
+                        List<Map<String, Object>> convos = (List<Map<String, Object>>) data.get(CONVERSATIONS_KEY);
 
-                        Map<String, Timestamp> lastSeenDates = (Map<String, Timestamp>) data.get(DATE_SEEN_KEY);
                         for (int i = 0; i < convos.size(); i++)
                         {
-                            if (convos.get(i).getId().equals(convoKey))
+//                            Log.d(TAG, ((DocumentReference) (convos.get(i).get(CONVO_ID_KEY))).getId() + " = id: " + convoKey);
+                            if (((DocumentReference) (convos.get(i).get(CONVO_ID_KEY))).getId().equals(convoKey))
                             {
-                                lastSeenDates.put(convoKey, new Timestamp(newDate));
+                                Log.d(TAG, "made it here");
+                                Log.d(TAG, convos.toString());
+                                convos.get(i).put(LAST_SEEN_KEY, new Timestamp(newDate));
+                                Log.d(TAG, convos.toString());
+                                Log.d(TAG, document.getId());
                                 database.collection(USERNAME_DATABASE)
                                         .document(document.getId())
                                         .update(data);
+
                                 break;
                             }
                         }
                     }
                 });
+//        database.collection(CONVERSATIONS_DATABASE)
+//                .document(convoKey)
+//                .get()
+//                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+//                    @Override
+//                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+//                        DocumentSnapshot document = task.getResult();
+//                        Map<String, Object> data = document.getData();
+//                        data.put(LAST_TIME_SENT_KEY, newDate);
+//                        database.collection(CONVERSATIONS_DATABASE)
+//                                .document(convoKey)
+//                                .update(data);
+//                    }
+//                });
     }
 
     public void compareToFirstMessage(
@@ -496,33 +540,16 @@ public class FirebaseReader {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         DocumentSnapshot snapshot = task.getResult();
-                        String firstMessage = null;
-                        try
-                        {
-                            firstMessage = ((List<DocumentReference>) snapshot.get(MESSAGES_KEY)).get(0).getId();
-                        } catch (IndexOutOfBoundsException ioobe)
+                        Date lastSeenTime = snapshot.getDate(LAST_TIME_SENT_KEY);
+                        Log.d(TAG, lastSeenTime + ": " + userDate + ", " + snapshot.getString(TITLE_KEY));
+                        if (lastSeenTime.after(userDate))
                         {
                             listener.notifyOnSuccess();
-                            return;
                         }
-                        database.collection(MESSAGES_DATABASE)
-                                .document(firstMessage)
-                                .get()
-                                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                                        DocumentSnapshot message = task.getResult();
-                                        Log.d(TAG, message.getString(CONTENT_KEY) + ", " + ((Timestamp) message.get(TIME_KEY)).toDate() + "; " + userDate);
-                                        if (((Timestamp) message.get(TIME_KEY)).toDate().compareTo(userDate) > 0)
-                                        {
-                                            listener.notifyOnSuccess();
-                                        }
-                                        else
-                                        {
-                                            listener.notifyOnError("");
-                                        }
-                                    }
-                                });
+                        else
+                        {
+                            listener.notifyOnError("");
+                        }
                     }
                 });
     }

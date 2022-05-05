@@ -12,6 +12,7 @@ public class ConversationActivity extends AppCompatActivity
 
     public static final String USER_KEY = "user";
     public static final String CONVO_ID = "convo id";
+    public static final String MESSAGE_ID = "message id";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,7 +28,8 @@ public class ConversationActivity extends AppCompatActivity
                         ConversationDisplayFragment.newInstance
                                 (
                                         parent.getStringExtra(USER_KEY),
-                                        parent.getStringExtra(CONVO_ID)
+                                        parent.getStringExtra(CONVO_ID),
+                                        parent.getStringExtra(MESSAGE_ID)
                                 )
                 );
         fragments.replace
@@ -36,7 +38,8 @@ public class ConversationActivity extends AppCompatActivity
                         CreateMessageFragment.newInstance
                                 (
                                         parent.getStringExtra(USER_KEY),
-                                        parent.getStringExtra(CONVO_ID)
+                                        parent.getStringExtra(CONVO_ID),
+                                        parent.getStringExtra(MESSAGE_ID)
                                 )
                 );
         fragments.commit();

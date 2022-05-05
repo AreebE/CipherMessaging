@@ -60,7 +60,8 @@ public class ContactsFragment extends ListFragment
         @Override
         public void run() {
             loadConversations();
-            handler.postDelayed(this, 1000);
+            Log.d(TAG, "eee");
+            handler.postDelayed(this, 2000);
         }
     };
     private int itemsLoaded;
@@ -77,12 +78,14 @@ public class ContactsFragment extends ListFragment
         private String nameOfOther;
         private String convoName;
         private Date mostRecent;
-        public ConversationItem(String id, String name, String convoName, Date date)
+        private String messageID;
+        public ConversationItem(String id, String name, String convoName, String messageListID, Date date)
         {
             this.idOfConvo = id;
             this.nameOfOther = name;
             this.convoName = convoName;
             this.mostRecent = date;
+            this.messageID = messageListID;
         }
 
         public String getID()
@@ -101,6 +104,11 @@ public class ContactsFragment extends ListFragment
         }
 
         public Date getDate() {return mostRecent;}
+
+        public String getMessageID()
+        {
+            return messageID;
+        }
     }
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -140,7 +148,6 @@ public class ContactsFragment extends ListFragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_contacts, container, false);
-        handler.post(convoLoader);
         return v;
     }
 
@@ -159,10 +166,12 @@ public class ContactsFragment extends ListFragment
         }
         handler.removeCallbacksAndMessages(null);
         String convoID = ((ConversationItem) getListAdapter().getItem(position)).getID();
+        String messageID = ((ConversationItem) getListAdapter().getItem(position)).getMessageID();
         Intent i = new Intent(getActivity(), ConversationActivity.class);
-        Log.d(TAG, "item cliekc");
+//        Log.d(TAG, "item cliekc");
         i.putExtra(ConversationActivity.CONVO_ID, convoID);
         i.putExtra(ConversationActivity.USER_KEY, username);
+        i.putExtra(ConversationActivity.MESSAGE_ID, messageID);
         startActivity(i);
         super.onListItemClick(l, v, position, id);
     }
@@ -174,6 +183,12 @@ public class ContactsFragment extends ListFragment
         ContactsFragment.this.setListAdapter(new ContactAdapter(getActivity(), new ArrayList<ConversationItem>()));
         itemsLoaded = 0;
         handler.post(convoLoader);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        handler.removeCallbacksAndMessages(null);
     }
 
     /* The menus */
@@ -212,7 +227,7 @@ public class ContactsFragment extends ListFragment
 
         public ContactAdapter(@NonNull Context context, @NonNull List<ConversationItem> objects) {
             super(context, R.layout.conversation_item, objects);
-            Log.d(TAG, "new id created");
+//            Log.d(TAG, "new id created");
         }
 
         @NonNull
@@ -258,13 +273,13 @@ public class ContactsFragment extends ListFragment
 
                 private void postDelay()
                 {
-                    Log.d(TAG, "testing the delay");
-                    handler.postDelayed(this, 1000);
+//                    Log.d(TAG, "testing the delay");
+                    handler.postDelayed(this, 2000);
                 }
             };
             handler.post(badgeUpdater);
 
-            System.out.println(conversationItem.getName());
+//            System.out.println(conversationItem.getName());
             convo.setText(conversationItem.getConvoName());
             return convertView;
         }
@@ -283,19 +298,20 @@ public class ContactsFragment extends ListFragment
 
             @Override
             public void notifyOnSuccess() {
-                Log.d(TAG, "finished loading");
+//                Log.d(TAG, "finished loading");
                 if (itemsLoaded != items.size())
                 {
                     for (int i = 0; i < items.size() - itemsLoaded; i++)
                     {
                         ((ContactAdapter) getListAdapter()).add(items.get(i));
                     }
+                    itemsLoaded = items.size();
+                    synchronized (getListAdapter())
+                    {
+                        ((ContactAdapter) getListAdapter()).notifyDataSetChanged();
+                    }
                 }
-                itemsLoaded = items.size();
-                synchronized (getListAdapter())
-                {
-                    ((ContactAdapter) getListAdapter()).notifyDataSetChanged();
-                }
+
             }
         },
                 getContext());

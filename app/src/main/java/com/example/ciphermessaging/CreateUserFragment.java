@@ -61,25 +61,22 @@ public class CreateUserFragment extends DialogFragment
         View v = onCreateView(getLayoutInflater(), null, savedInstanceState);
         EditText username = (EditText) v.findViewById(R.id.username);
         EditText password = (EditText) v.findViewById(R.id.password);
-        EditText firstName = (EditText) v.findViewById(R.id.firstName);
-        EditText lastName = (EditText) v.findViewById(R.id.lastName);
+
         Button submitUser = (Button) v.findViewById(R.id.submitButton);
         submitUser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String user = username.getText().toString();
                 String pass = password.getText().toString();
-                String first = firstName.getText().toString();
-                String last = lastName.getText().toString();
+
                 if (user.length() == 0
                         || pass.length() == 0
-                        || first.length() == 0
-                        || last.length() == 0)
+                        )
                 {
                     notifyOnError("Please put valid input.");
                     return;
                 }
-                new FirebaseReader().createUser(user, first, last, pass, CreateUserFragment.this, getContext());
+                new FirebaseReader().createUser(user, pass, CreateUserFragment.this, getContext());
             }
         });
         AlertDialog dialog = new AlertDialog.Builder(getActivity())

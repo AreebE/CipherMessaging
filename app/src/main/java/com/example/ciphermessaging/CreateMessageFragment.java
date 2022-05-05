@@ -41,21 +41,24 @@ public class CreateMessageFragment extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String SENDER_KEY = "sender";
     private static final String CONVO_ID_KEY = "convo id";
+    private static final String MESSAGE_LIST_ID_KEY = "message list id";
 
     // TODO: Rename and change types of parameters
     private String sender;
     private String convoID;
+    private String messageID;
 
     public CreateMessageFragment() {
         // Required empty public constructor
     }
 
 
-    public static CreateMessageFragment newInstance(String sender, String convoID) {
+    public static CreateMessageFragment newInstance(String sender, String convoID, String messageListID) {
         CreateMessageFragment fragment = new CreateMessageFragment();
         Bundle args = new Bundle();
         args.putString(SENDER_KEY, sender);
         args.putString(CONVO_ID_KEY, convoID);
+        args.putString(MESSAGE_LIST_ID_KEY, messageListID);
         fragment.setArguments(args);
         return fragment;
     }
@@ -66,6 +69,7 @@ public class CreateMessageFragment extends Fragment {
         if (getArguments() != null) {
             sender = getArguments().getString(SENDER_KEY);
             convoID = getArguments().getString(CONVO_ID_KEY);
+            messageID = getArguments().getString(MESSAGE_LIST_ID_KEY);
         }
     }
 
@@ -103,6 +107,7 @@ public class CreateMessageFragment extends Fragment {
                                 content,
                                 timestamp,
                                 convoID,
+                                messageID,
                                 new FirebaseReader.FirebaseReaderListener() {
                                     @Override
                                     public void notifyOnError(String message) {

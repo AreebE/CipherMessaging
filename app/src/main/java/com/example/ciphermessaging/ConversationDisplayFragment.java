@@ -91,18 +91,21 @@ public class ConversationDisplayFragment extends ListFragment
 
     private static final String USERNAME_KEY = "username";
     private static final String CONVERSATION_KEY = "conversation";
+    private static final String MESSAGE_LIST_KEY = "message list";
     private String thisUser;
     private String convoID;
+    private String messageID;
     public ConversationDisplayFragment() {
         // Required empty public constructor
     }
 
 
-    public static ConversationDisplayFragment newInstance(String username, String convoID) {
+    public static ConversationDisplayFragment newInstance(String username, String convoID, String messageID) {
         ConversationDisplayFragment fragment = new ConversationDisplayFragment();
         Bundle args = new Bundle();
         args.putString(USERNAME_KEY, username);
         args.putString(CONVERSATION_KEY, convoID);
+        args.putString(MESSAGE_LIST_KEY, messageID);
         fragment.setArguments(args);
         return fragment;
     }
@@ -113,6 +116,7 @@ public class ConversationDisplayFragment extends ListFragment
         if (getArguments() != null) {
             thisUser = getArguments().getString(USERNAME_KEY);
             convoID = getArguments().getString(CONVERSATION_KEY);
+            messageID = getArguments().getString(MESSAGE_LIST_KEY);
         }
     }
 
@@ -204,7 +208,7 @@ public class ConversationDisplayFragment extends ListFragment
 //        setListAdapter(adapter);
 //        Log.d(TAG, convoID + "loading convo");
 
-        new FirebaseReader().getMessages(convoID, numToLoad, items, new FirebaseReader.FirebaseReaderListener() {
+        new FirebaseReader().getMessages(messageID, numToLoad, items, new FirebaseReader.FirebaseReaderListener() {
             @Override
             public void notifyOnError(String message) {
 
@@ -246,7 +250,7 @@ public class ConversationDisplayFragment extends ListFragment
 
 //                Log.d(TAG, "items found = " + items.size());
 
-                handler.postDelayed(conversationLoader, 1000);
+                handler.postDelayed(conversationLoader, 2000);
 
             }
         },
@@ -258,7 +262,7 @@ public class ConversationDisplayFragment extends ListFragment
     @Override
     public void onPause() {
         super.onPause();
-        handler.removeCallbacks(null);
+        handler.removeCallbacksAndMessages(null);
         new FirebaseReader().updateDate(thisUser, convoID, Calendar.getInstance().getTime());
     }
 
