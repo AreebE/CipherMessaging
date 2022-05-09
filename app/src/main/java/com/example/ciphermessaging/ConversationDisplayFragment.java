@@ -208,7 +208,7 @@ public class ConversationDisplayFragment extends ListFragment
 //        setListAdapter(adapter);
 //        Log.d(TAG, convoID + "loading convo");
 
-        new FirebaseReader().getMessages(messageID, numToLoad, items, new FirebaseReader.FirebaseReaderListener() {
+        new FirebaseReader().getMessages(convoID, messageID, numToLoad, items, new FirebaseReader.FirebaseReaderListener() {
             @Override
             public void notifyOnError(String message) {
 

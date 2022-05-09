@@ -21,13 +21,30 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.KeyGeneratorSpi;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import biz.source_code.crypto.Idea;
 
 /*
  * Add a fail when the internet is off
@@ -80,7 +97,14 @@ public class FirebaseReader {
                             listener.notifyOnError("No other user found.");
                             return;
                         }
-                        loadConvo(username, otherUsername, conversationTitle, listener);
+                        try
+                        {
+                            loadConvo(username, otherUsername, conversationTitle, listener);
+
+                        } catch (NoSuchAlgorithmException nsae)
+                        {
+                            Log.d(TAG, nsae.toString());
+                        }
                     }
                 });
 
@@ -90,8 +114,7 @@ public class FirebaseReader {
             String username,
             String otherUsername,
             String conversationTitle,
-            FirebaseReaderListener listener)
-    {
+            FirebaseReaderListener listener) throws NoSuchAlgorithmException {
         Map<String, Object> convoData = new HashMap<>();
         convoData.put(USERS_KEY, new ArrayList<String>(){
             {
@@ -99,8 +122,16 @@ public class FirebaseReader {
                 add(otherUsername);
             }
         });
+        KeyGenerator IDEAKey = KeyGenerator.getInstance("AES");
+        IDEAKey.init(256);
+        byte[] bytes = IDEAKey.generateKey().getEncoded();
+        List<Long> key = new ArrayList<>();
+        for (int i = 0; i < bytes.length; i++)
+        {
+            key.add(i, new Long(bytes[0]));
+        }
         convoData.put(TITLE_KEY, conversationTitle);
-        convoData.put(CIPHER_KEY, "1234567890abcdefghijklmnopqrstuvwxyz");
+        convoData.put(CIPHER_KEY, key);
 
         Map<String, Object> messageListData = new HashMap<>();
         messageListData.put(MESSAGES_LINK, new ArrayList<DocumentReference>());
@@ -169,6 +200,7 @@ public class FirebaseReader {
 
 
     public void getMessages(
+            String convoID,
             String messageID,
             int startIndex,
             ArrayList<ConversationDisplayFragment.MessageItem> items,
@@ -182,6 +214,42 @@ public class FirebaseReader {
             messagingFragment.notifyOnError("No connection to the internet.");
             return;
         }
+        database.collection(CONVERSATIONS_DATABASE)
+                .document(convoID)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        try
+                        {
+                            ArrayList<Long> key = (ArrayList<Long>) task.getResult().get(CIPHER_KEY);
+                            byte[] bytes = new byte[key.size()];
+                            for (int i = 0; i < key.size(); i++)
+                            {
+                                bytes[i] = key.get(i).byteValue();
+                            }
+                            SecretKeySpec secKey = new SecretKeySpec(bytes, "AES");
+                            Cipher cipher = Cipher.getInstance("AES");
+                            cipher.init(Cipher.DECRYPT_MODE, secKey);
+                            decryptMessages(messageID, startIndex, items, messagingFragment, cipher);
+
+                        }
+                            catch (InvalidKeyException| NoSuchPaddingException|  NoSuchAlgorithmException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+
+    }
+
+    private void decryptMessages
+            (String messageID,
+             int startIndex,
+             ArrayList<ConversationDisplayFragment.MessageItem> items,
+             FirebaseReaderListener messagingFragment,
+             Cipher decryptor
+            )
+    {
         database.collection(MESSAGE_LIST_DATABASE)
                 .document(messageID)
                 .get()
@@ -192,7 +260,7 @@ public class FirebaseReader {
                         List<DocumentReference> messageLinks = (List<DocumentReference>) conversation.get(MESSAGES_LINK);
                         for (int i = items.size(); i < messageLinks.size(); i++)
                         {
-                           items.add(i, null);
+                            items.add(i, null);
                         }
                         final int[] loadedItems = {0};
                         for (int i = 0; i < messageLinks.size(); i++)
@@ -206,7 +274,18 @@ public class FirebaseReader {
                                         @Override
                                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                             DocumentSnapshot message = task.getResult();
-                                            String content = message.getString(CONTENT_KEY);
+                                            String content = "";
+                                            try
+                                            {
+                                                content = new String(
+                                                        decryptor.doFinal(
+                                                                Base64.getDecoder().decode(message.getString(CONTENT_KEY))
+                                                        )
+                                                );
+                                            } catch (Exception e)
+                                            {
+                                                Log.d(TAG, "error decrypting -- " + e.toString());
+                                            }
                                             String sender = message.getString(SENDER_KEY);
                                             Date timeStamp = message.getDate(TIME_KEY);
                                             items.set(finalI, new ConversationDisplayFragment.MessageItem(sender, timeStamp, content));
@@ -237,6 +316,45 @@ public class FirebaseReader {
             FirebaseReaderListener listener,
             Context context)
     {
+        database.collection(CONVERSATIONS_DATABASE)
+                .document(convoID)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        try {
+                            ArrayList<Long> key = (ArrayList<Long>) task.getResult().get(CIPHER_KEY);
+                            byte[] bytes = new byte[key.size()];
+                            for (int i = 0; i < key.size(); i++)
+                            {
+                                bytes[i] = key.get(i).byteValue();
+                            }
+                            SecretKeySpec secKey = new SecretKeySpec(bytes, "AES");
+                            Cipher cipher = Cipher.getInstance("AES");
+
+                                cipher.init(Cipher.ENCRYPT_MODE, secKey);
+
+                            String encryptedContent = new String(Base64.getEncoder().encode(cipher.doFinal(content.getBytes())));
+                            loadEncryptedMessage(sender, encryptedContent, timestamp, convoID, messageListID, listener, context);
+                            Log.d(TAG, "Encrypted -- " + encryptedContent);
+                        }
+                        catch (InvalidKeyException| NoSuchPaddingException| BadPaddingException| NoSuchAlgorithmException | IllegalBlockSizeException e) {
+                            Log.d(TAG, "Error - " + e.toString());
+                        }
+                    }
+                });
+    }
+
+    private void loadEncryptedMessage(
+            String sender,
+            String content,
+            Date timestamp,
+            String convoID,
+            String messageListID,
+            FirebaseReaderListener listener,
+            Context context
+    )
+    {
         if (!isInternetEnabled(context))
         {
             listener.notifyOnError("No connection to the internet.");
@@ -261,12 +379,12 @@ public class FirebaseReader {
                                         Map<String, Object> convoData = task.getResult().getData();
                                         ((List<DocumentReference>) convoData.get(MESSAGES_LINK)).add(0, messageReference);
                                         database.collection(MESSAGE_LIST_DATABASE).document(messageListID).update(convoData)
-                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                            @Override
-                                            public void onComplete(@NonNull Task<Void> task) {
-                                                listener.notifyOnSuccess();
-                                            }
-                                        });
+                                                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                    @Override
+                                                    public void onComplete(@NonNull Task<Void> task) {
+                                                        listener.notifyOnSuccess();
+                                                    }
+                                                });
                                     }
                                 });
                         database.collection(CONVERSATIONS_DATABASE)
