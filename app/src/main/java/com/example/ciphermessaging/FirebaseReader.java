@@ -276,6 +276,7 @@ public class FirebaseReader {
                                             DocumentSnapshot message = task.getResult();
                                             String content = "";
                                             try
+
                                             {
                                                 content = new String(
                                                         decryptor.doFinal(
